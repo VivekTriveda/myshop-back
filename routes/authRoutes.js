@@ -1,106 +1,106 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 
-const router = express.Router();
+const User = require("../models/User");
+const Order = require("../models/Order");
+const Feedback = require("../models/Feedback");
 
-// In-Memory Storage
-let users = [];
-let orders = [];
-let feedbacks = [];
+const router = express.Router();
 
 /* ===========================
    REGISTER
 =========================== */
 
-router.post("/register", async (req, res) => {
+router.post("/register", async (req,res)=>{
 
-    try {
+try{
 
-        const { username, email, password } = req.body;
+const {username,email,password} = req.body;
 
-        if (!username || !email || !password) {
-            return res.status(400).json({
-                success: false,
-                message: "All fields are required"
-            });
-        }
+if(!username || !email || !password){
+return res.status(400).json({
+success:false,
+message:"All fields are required"
+});
+}
 
-        const usernameRegex = /^[a-zA-Z0-9]+$/;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const passwordRegex =
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
+const usernameRegex =
+/^[a-zA-Z0-9]{4,20}$/;
 
-        if (!usernameRegex.test(username)) {
-            return res.status(400).json({
-                success: false,
-                message: "Username must be alphanumeric"
-            });
-        }
+const emailRegex =
+/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!emailRegex.test(email)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid email format"
-            });
-        }
+const passwordRegex =
+/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
 
-        if (!passwordRegex.test(password)) {
-            return res.status(400).json({
-                success: false,
-                message:
-                "Password must contain uppercase, lowercase, number and special character"
-            });
-        }
+if(!usernameRegex.test(username)){
+return res.status(400).json({
+success:false,
+message:"Username must be 4-20 characters and alphanumeric"
+});
+}
 
-        const existingUser = users.find(
-            u => u.username.toLowerCase() === username.toLowerCase()
-        );
+if(!emailRegex.test(email)){
+return res.status(400).json({
+success:false,
+message:"Invalid email format"
+});
+}
 
-        if (existingUser) {
-            return res.status(400).json({
-                success: false,
-                message: "Username already exists"
-            });
-        }
+if(!passwordRegex.test(password)){
+return res.status(400).json({
+success:false,
+message:"Password must contain uppercase, lowercase, number and special character"
+});
+}
 
-        const existingEmail = users.find(
-            u => u.email.toLowerCase() === email.toLowerCase()
-        );
+const existingUser =
+await User.findOne({username});
 
-        if (existingEmail) {
-            return res.status(400).json({
-                success: false,
-                message: "Email already registered"
-            });
-        }
+if(existingUser){
+return res.status(400).json({
+success:false,
+message:"Username already exists"
+});
+}
 
-        const hashedPassword =
-        await bcrypt.hash(password, 10);
+const existingEmail =
+await User.findOne({email});
 
-        const user = {
-            id: users.length + 1,
-            username,
-            email,
-            password: hashedPassword
-        };
+if(existingEmail){
+return res.status(400).json({
+success:false,
+message:"Email already registered"
+});
+}
 
-        users.push(user);
+const hashedPassword =
+await bcrypt.hash(password,10);
 
-        res.status(201).json({
-            success: true,
-            message: "Registration Successful"
-        });
+const user = new User({
+username,
+email,
+password:hashedPassword
+});
 
-    } catch (err) {
+await user.save();
 
-        console.error(err);
+res.status(201).json({
+success:true,
+message:"Registration Successful"
+});
 
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
+}
+catch(err){
 
-    }
+console.error(err);
+
+res.status(500).json({
+success:false,
+message:err.message
+});
+
+}
 
 });
 
@@ -108,70 +108,67 @@ router.post("/register", async (req, res) => {
    LOGIN
 =========================== */
 
-router.post("/login", async (req, res) => {
+router.post("/login", async(req,res)=>{
 
-    try {
+try{
 
-        const { username, password } = req.body;
+const {username,password} = req.body;
 
-        const user = users.find(
-            u => u.username === username
-        );
+const user =
+await User.findOne({username});
 
-        if (!user) {
+if(!user){
+return res.status(400).json({
+success:false,
+message:"Invalid Username"
+});
+}
 
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Username"
-            });
+const isMatch =
+await bcrypt.compare(
+password,
+user.password
+);
 
-        }
+if(!isMatch){
+return res.status(400).json({
+success:false,
+message:"Invalid Password"
+});
+}
 
-        const isMatch =
-        await bcrypt.compare(
-            password,
-            user.password
-        );
+res.json({
+success:true,
+message:"Login Successful",
+user:{
+id:user._id,
+username:user.username,
+email:user.email
+}
+});
 
-        if (!isMatch) {
+}
+catch(err){
 
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Password"
-            });
+res.status(500).json({
+success:false,
+message:err.message
+});
 
-        }
-
-        res.json({
-            success: true,
-            message: "Login Successful",
-            user: {
-                id: user.id,
-                username: user.username,
-                email: user.email
-            }
-        });
-
-    } catch (err) {
-
-        console.error(err);
-
-        res.status(500).json({
-            success: false,
-            message: err.message
-        });
-
-    }
+}
 
 });
 
 /* ===========================
-   GET ALL USERS
+   GET USERS
 =========================== */
 
-router.get("/users", (req, res) => {
+router.get("/users", async(req,res)=>{
 
-    res.json(users);
+const users =
+await User.find();
+
+res.json(users);
 
 });
 
@@ -179,18 +176,16 @@ router.get("/users", (req, res) => {
    DELETE USER
 =========================== */
 
-router.delete("/users/:id", (req, res) => {
+router.delete("/users/:id", async(req,res)=>{
 
-    const userId = parseInt(req.params.id);
+await User.findByIdAndDelete(
+req.params.id
+);
 
-    users = users.filter(
-        user => user.id !== userId
-    );
-
-    res.json({
-        success: true,
-        message: "User Deleted"
-    });
+res.json({
+success:true,
+message:"User Deleted"
+});
 
 });
 
@@ -198,19 +193,17 @@ router.delete("/users/:id", (req, res) => {
    PLACE ORDER
 =========================== */
 
-router.post("/place-order", (req, res) => {
+router.post("/place-order", async(req,res)=>{
 
-    const order = {
-        id: orders.length + 1,
-        ...req.body
-    };
+const order =
+new Order(req.body);
 
-    orders.push(order);
+await order.save();
 
-    res.json({
-        success: true,
-        orderId: order.id
-    });
+res.json({
+success:true,
+orderId:order._id
+});
 
 });
 
@@ -218,9 +211,12 @@ router.post("/place-order", (req, res) => {
    GET ORDERS
 =========================== */
 
-router.get("/orders", (req, res) => {
+router.get("/orders", async(req,res)=>{
 
-    res.json(orders);
+const orders =
+await Order.find();
+
+res.json(orders);
 
 });
 
@@ -228,31 +224,49 @@ router.get("/orders", (req, res) => {
    FEEDBACK
 =========================== */
 
-router.post("/feedback", (req, res) => {
+router.post("/feedback", async(req,res)=>{
 
-    const feedback = {
-        id: feedbacks.length + 1,
-        ...req.body
-    };
+const existingFeedback =
+await Feedback.findOne({
+userId:req.body.userId
+});
 
-    feedbacks.push(feedback);
+if(existingFeedback){
 
-    res.json({
-        success: true,
-        message: "Feedback Saved Successfully"
-    });
+return res.status(400).json({
+success:false,
+message:"Feedback already submitted"
+});
+
+}
+
+const feedback =
+new Feedback(req.body);
+
+await feedback.save();
+
+res.json({
+success:true,
+message:"Feedback Saved Successfully"
+});
 
 });
 
-router.get("/check-feedback/:userId", (req, res) => {
+/* ===========================
+   CHECK FEEDBACK
+=========================== */
 
-    const feedback = feedbacks.find(
-        f => f.userId == req.params.userId
-    );
+router.get("/check-feedback/:userId",
+async(req,res)=>{
 
-    res.json({
-        submitted: !!feedback
-    });
+const feedback =
+await Feedback.findOne({
+userId:req.params.userId
+});
+
+res.json({
+submitted:!!feedback
+});
 
 });
 
