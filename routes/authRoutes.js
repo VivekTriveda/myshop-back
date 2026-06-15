@@ -228,7 +228,7 @@ router.post("/feedback", async(req,res)=>{
 
 const existingFeedback =
 await Feedback.findOne({
-userId:req.body.userId
+email:req.body.email
 });
 
 if(existingFeedback){
@@ -251,7 +251,6 @@ message:"Feedback Saved Successfully"
 });
 
 });
-
 /* ===========================
    CHECK FEEDBACK
 =========================== */
