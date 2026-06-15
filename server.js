@@ -17,7 +17,13 @@ app.use("/api/auth", authRoutes);
 app.get("/", (req, res) => {
     res.send("E-Commerce Backend Running");
 });
-
+app.get("/db-info", async (req, res) => {
+    res.json({
+        database: mongoose.connection.db.databaseName,
+        host: mongoose.connection.host,
+        readyState: mongoose.connection.readyState
+    });
+});
 const PORT = process.env.PORT || 5000;
 mongoose.connect(process.env.MONGODB_URI)
 .then(() => {
