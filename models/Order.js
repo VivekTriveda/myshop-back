@@ -1,10 +1,13 @@
 const mongoose = require("mongoose");
 
-const OrderSchema = new mongoose.Schema({
-  username: String,
-  products: Array,
-  total: Number,
-  paymentStatus: String
-});
+const orderSchema = new mongoose.Schema({
+  customerName: String,
+  address: String,
+  mobile: String,
+  paymentMethod: String,
+  totalAmount: Number,
+  cartItems: Array
+}, { timestamps:true });
 
-module.exports = mongoose.model("Order", OrderSchema);
+module.exports =
+mongoose.model("Order", orderSchema);
